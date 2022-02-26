@@ -71,14 +71,25 @@ class Main:
         e_p = e**power
         return frac_E * e_p
 
+    def make_subplot(self, axis, x_values, y_values, colours, labels, mean_values, mean_locs, legend):
+        for y_value, colour in zip(y_values, colours):
+            axis.plot(x_values, y_value, color=colour)
+        axis.set(xlabel=labels[0], ylabel=labels[1])
+        for value, loc, colour, value_list in zip(mean_values, mean_locs, colours, y_values):
+            axis.vlines([value], ymin=0, ymax=value_list[loc], color=colour)
+        axis.legend(legend)
+
     def task5(self):
         pi = math.pi
+        neutron_mass = 1.6749275 * 10**(-27)
         k = 1.3806 * 10 ** (-23)
         e = math.e
         j_to_ev = 6.242 * 10**18
         max_e = 5 * 10**(-20)
+        max_speed = 10  # in km/s
         steps = 100
         step = max_e / steps
+        speed_step = max_speed / steps
         values_300 = []
         values_600 = []
         values_ev = []
@@ -109,17 +120,45 @@ class Main:
                 i_600 = i
                 break
 
-        plt.plot(values_ev, values_300, color="b")
-        plt.plot(values_ev, values_600, color="orange")
-        plt.xlabel("E (eV)")
-        plt.ylabel("Xp (1/eV)")
-        print(f"Mean energy for a 300 K neutron is {ev_300} eV and for a 600 K neutron, it is {ev_600} eV.")
-        plt.vlines([ev_300], ymin=0, ymax=values_300[i_300], color="b")
-        plt.vlines([ev_600], ymin=0, ymax=values_600[i_600], color="orange")
-        # plt.show()
+        fig, (plot1, plot2) = plt.subplots(2)
 
-        speeds_300 = [math.sqrt(2 * x * conversions["MeV"]["J"] / 10**6 / (1.6749275 * 10**(-27))) for x in values_300]
-        print(speeds_300)
+        print(f"Mean energy for a 300 K neutron is {ev_300} eV and for a 600 K neutron, it is {ev_600} eV.")
+        self.make_subplot(plot1, values_ev, [values_300, values_600], ["b", "orange"], ["E (eV)", "Xp (1/eV)"], [ev_300, ev_600], [i_300, i_600], ["300K", "600K"])
+
+        values_300_s = []
+        values_600_s = []
+        values_speed = []
+        for i in range(steps + 1):
+            values_300_s.append(Main.P(300, pi, k, e, neutron_mass * (i * speed_step * 1000)**2 / 2))
+            values_600_s.append(Main.P(600, pi, k, e, neutron_mass * (i * speed_step * 1000)**2 / 2))
+            values_speed.append(i * speed_step)
+        total_300_s = sum(values_300_s)
+        total_600_s = sum(values_600_s)
+
+        values_300_s = [steps * x / total_300_s / values_speed[-1] for x in values_300_s]
+        values_600_s = [steps * x / total_600_s / values_speed[-1] for x in values_600_s]
+
+        total_300_s = sum(values_300_s)
+        total_600_s = sum(values_600_s)
+        sum_300_s = 0
+        for i, value in enumerate(values_300_s):
+            sum_300_s += value
+            if sum_300_s * 2 >= total_300_s:
+                ev_300_s = values_speed[i]
+                i_300_s = i
+                break
+        sum_600_s = 0
+        for i, value in enumerate(values_600_s):
+            sum_600_s += value
+            if sum_600_s * 2 >= total_600_s:
+                ev_600_s = values_speed[i]
+                i_600_s = i
+                break
+
+        print(f"Mean velocity for a 300 K neutron is {ev_300_s} km/s and for a 600 K neutron, it is {ev_600_s} km/s.")
+        self.make_subplot(plot2, values_speed, [values_300_s, values_600_s], ["b", "orange"], ["v (km/s)", "Xp (s/km)"], [ev_300_s, ev_600_s], [i_300_s, i_600_s], ["300K", "600K"])
+
+        plt.show()
 
 
 if __name__ == '__main__':
